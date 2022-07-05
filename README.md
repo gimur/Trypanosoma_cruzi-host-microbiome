@@ -3,8 +3,8 @@
 
 Alterations caused by Trypanosoma cruzi in the gut microbiome composition may play a key role in the host-parasite interactions and may be involved in a decrease of bacterial taxa and metabolic pathways that could be related to changes in physiology and immune responses against the parasite, promoting the establishment and progression of the infection. Therefore, we implemented a murine model with two mouse strains, BALBc and BL6, to evaluate the impact of Trypanosoma cruzi (Tulahuen strain) infection on the gut microbiome using shotgun metagenomics.
 
-#Bioinformatics Analysis
-##Sequence processing, taxonomic assignment, and functional profiling 
+# Bioinformatics Analysis
+## Sequence processing, taxonomic assignment, and functional profiling 
 From the raw reads, a quality assessment was performed by FastQC (25). Quality and adapter trimming was then performed by Trimmomatic (26) using the parameters ILLUMINACLIP: TruSeq3-PE.fa:2:30:10:2:keepBothReads MINLEN:150 AVGQUAL:20 TRAILING:20. Mapping to the Mus musculus genome (GRCm39) was performed using the Bowtie2 tool (27) to remove reads corresponding to the host.
 
 From the clean reads, the Centrifuge tool was used for taxonomic assignment (28). The obtained outputs were transformed to Kraken-Report format with the Centrifuge-kreport function for the corresponding analysis and visualization by Pavian (29). Additionally, a beta diversity analysis was performed by non-parametric multidimensional scaling (NMDS) to compare the microbiota composition between controls and infected.
