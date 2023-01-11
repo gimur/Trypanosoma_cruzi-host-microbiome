@@ -430,6 +430,124 @@ grep 'IMP-DEHYDROG-RXN' sample_Reads_Final_Humann_stratified.tsv | less -S
 
 humann_barplot --input sample_Reads_Final_Humann_stratified.tsv --focal-metadata Time --last-metadata Condition --output BALBc_RXN-14117_2.png --focal-feature 'RXN-14117' --sort sum metadata --scaling logstack
 
+#Binning
+
+
+bowtie2-build contigs.fasta final.contigs
+
+bowtie2 -x final.contigs -1 *R1.fq.gz -2 *R2.fq.gz | samtools view -bS -o /*_to_sort.bam
+
+samtools sort *_to_sort.bam -o *.bam
+
+samtools index *.bam
+
+conda install metabat2
+
+runMetaBat.sh -m 1500 -t 18 contigs.fasta *.bam
+
+conda install maxbin2
+
+run_MaxBin.pl -thread 16 -contig contigs.fasta -reads *_R1.fq.gz -reads2 *_R2.fq.gz -out name
+
+git clone https://github.com/BinPro/CONCOCT.git
+cd CONCOCT
+pip install -r requirements.txt
+python setup.py install
+
+cut_up_fasta.py contigs.fasta -c 10000 -o 0 --merge_last -b contigs_10K.bed > contigs_10K.fa
+
+concoct_coverage_table.py contigs_10K.bed *.bam > coverage_table.tsv
+
+# binning
+
+concoct --composition_file contigs_10K.fa --coverage_file coverage_table.tsv -b concoct_*/
+
+merge_cutup_clustering.py concoct_*/clustering_gt1000.csv > concoct_*/clustering_merged.csv
+
+mkdir concoct_*/fasta_bins
+
+extract_fasta_bins.py contigs.fasta concoct_*/clustering_merged.csv --output_path concoct_*/fasta_bins
+
+#CheckM
+
+conda create -n checkm python=3.9
+conda activate checkm
+conda install numpy matplotlib pysam
+conda install hmmer prodigal pplacer
+pip3 install checkm-genome
+
+wget https://data.ace.uq.edu.au/public/CheckM_databases/checkm_data_2015_01_16.tar.gz
+tar -xvzf
+
+checkm data setRoot .
+
+
+checkm lineage_wf -t 18 -x fasta bins ./
+
+checkm qa lineage.ms . -o 2 -f qa
+
+
+# DAS Tool
+
+module load usearch
+
+# Config input  DAS Tool by tool
+
+src/Fasta_to_Scaffolds2Bin.sh -i /tool/BALBc16NI -e fasta > tool.scaffolds2bin.tsv
+
+# CONCOCT
+
+perl -pe "s/,/\tconcoct./g;" concoct_*/clustering_gt1000.csv > concoct.scaffolds2bin.tsv
+
+
+# DAS Tool
+
+DAS_Tool -i /maxbin.scaffolds2bin.tsv,metabat.scaffolds2bin.tsv,concoct.scaffolds2bin.tsv -l maxbin,metabat,concoct -c contigs.fasta -t 16  --write_bins 1 -o *_Result
+
+#GTDB Tk
+
+conda create -n gtdbtk -c conda-forge -c bioconda gtdbtk
+conda activate gtdbtk
+
+download-db.sh
+
+#Workflow gtdbtk classify wf
+
+#identify, aligny y classify.
+
+gtdbtk classify_wf --e fa --genome_dir ensamblaje --out_dir out/gtdbtk --pplacer_cpus 1 --scratch_dir .
+
+#Anotation
+
+conda install -c conda-forge -c bioconda -c defaults prokka
+conda install -c bioconda perl-bioperl
+prokka --version
+
+for k in *.fna; do prokka $k --outdir "$k".prokka.output --prefix PROKKA_$k; echo $k; done
+
+prokka *.fasta --outdir *
+
+
+#Pangenoma Roary
+ml load miniconda3/4.8.3
+conda create --name NOMBRE
+conda env remove --name NOMBRE
+mamba install roary
+mamba install -c conda-forge -c bioconda -c defaults panaroo
+mamba create -n bactopia -c conda-forge -c bioconda bactopia
+
+roary -f roary_* -e -n -v -r -qc *.gff
+FastTree -nt -gtr core_gene_alignment.aln > my_tree.newick
+
+
+#Pangenoma Panaroo
+
+panaroo -i *.gff -o panaroo_out --clean-mode strict -a core --aligner mafft --core_threshold 0.99 -t 32
+FastTree -nt -gtr core_gene_alignment.aln > my_tree.newick
+
+
+
+
 
 
 
